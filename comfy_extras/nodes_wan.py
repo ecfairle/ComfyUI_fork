@@ -636,28 +636,22 @@ class WanTrackToVideo:
         
         # Parse tracks from JSON
         tracks_data = parse_json_tracks(tracks)
-        print("PARSED TRACKS DATA", len(tracks_data[0]))
         
         if tracks_data:
             # Convert tracks to tensor format
             arrs = []
             for track in tracks_data:
-                print("TRACK", track)
                 pts = pad_pts(track)
                 arrs.append(pts)
 
             tracks_np = np.stack(arrs, axis=0)
-            print("TRACKS_NP SHAPE", tracks_np.shape)
             processed_tracks = process_tracks(tracks_np, (width, height)).unsqueeze(0)
-            print("PROCESSED SHAPE", processed_tracks.shape)
             
             if start_image is not None:
                 start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
                 image = torch.ones((length, height, width, start_image.shape[-1]), device=start_image.device, dtype=start_image.dtype) * 0.5
                 image[:start_image.shape[0]] = start_image
-                print("START IMAGE SHAPE", start_image[:, :, :, :3].shape)
                 concat_latent_image = vae.encode(image[:, :, :, :3])
-                print("LATENT IMAGE SHAPE", concat_latent_image.shape)
 
                 patch_size = (1,2,2)
                 vae_stride = (4, 8, 8)
@@ -677,11 +671,9 @@ class WanTrackToVideo:
                 ],
                     dim=1)
 
-                print("CONCAT 4 MASK SHAPE", msk.shape)
                 # Reshape mask into groups of 4 frames
                 msk = msk.view(1, msk.shape[1] // 4, 4, lat_h, lat_w)
 
-                print("GROUPS OF 4 MASK SHAPE", msk.shape)
                 # first batch
                 msk = msk.transpose(1, 2)[0]
 
@@ -689,7 +681,6 @@ class WanTrackToVideo:
                 
                 start_image = start_image.permute(3,0,1,2)  # C, T, H, W
                 start_image = start_image * 2 - 1
-                print("START IMAGE shape", start_image.shape, "ZERO FRAMES shape", zero_frames.shape)
                 res = torch.concat([
                         start_image.to(start_image.device),
                         zero_frames
@@ -699,12 +690,10 @@ class WanTrackToVideo:
                 y = vae.encode(
                     res.permute(1,2,3,0)[:, :, :, :3]  # T, H, W, C
                 )[0]
-                print("SHAPES", y.shape, msk.shape)
                 y = torch.concat([msk, y])
 
                 try:
                     motion_patched = patch_motion(processed_tracks, y, temperature, (4, 16), topk)
-                    print("MOTION PATCHED SHAPE", motion_patched.shape)
                     
                     # Add motion features to conditioning
                     positive = node_helpers.conditioning_set_values(positive, 
