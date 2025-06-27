@@ -580,7 +580,6 @@ def process_tracks(tracks_np: np.ndarray, frame_size: Tuple[int, int], quant_mul
     visibles = visibles * 2 - 1
 
     trange = torch.linspace(-1, 1, tracks.shape[0]).view(-1, 1, 1, 1).expand(*visibles.shape)
-    print("TRANGE SHAPE", trange.shape, tracks.shape, visibles.shape)
 
     out_ = torch.cat([trange, tracks, visibles], dim=-1).view(121, -1, 4)
     out_0 = out_[:1]
@@ -692,23 +691,13 @@ class WanTrackToVideo:
                 )[0]
                 y = torch.concat([msk, y])
 
-                try:
-                    motion_patched = patch_motion(processed_tracks, y, temperature, (4, 16), topk)
-                    
-                    # Add motion features to conditioning
-                    positive = node_helpers.conditioning_set_values(positive, 
-                                                                 {"concat_latent_image": motion_patched})
-                    negative = node_helpers.conditioning_set_values(negative, 
-                                                                 {"concat_latent_image": motion_patched})
-                except Exception as e:
-                    print(f"Warning: Motion patching failed: {e}")
-                    # Fall back to basic track conditioning
-                    positive = node_helpers.conditioning_set_values(positive, {"ati_tracks": processed_tracks})
-                    negative = node_helpers.conditioning_set_values(negative, {"ati_tracks": processed_tracks})
-            else:
-                # No start image, just add track data to conditioning
-                positive = node_helpers.conditioning_set_values(positive, {"ati_tracks": processed_tracks})
-                negative = node_helpers.conditioning_set_values(negative, {"ati_tracks": processed_tracks})
+                motion_patched = patch_motion(processed_tracks, y, temperature, (4, 16), topk)
+                
+                # Add motion features to conditioning
+                positive = node_helpers.conditioning_set_values(positive, 
+                                                                {"concat_latent_image": motion_patched})
+                negative = node_helpers.conditioning_set_values(negative, 
+                                                                {"concat_latent_image": motion_patched})
 
         # Handle clip vision output if provided
         if clip_vision_output is not None:
@@ -717,7 +706,6 @@ class WanTrackToVideo:
 
         out_latent = {}
         out_latent["samples"] = latent
-        print("FINAL LATENT SHAPE", latent.shape)
         return (positive, negative, out_latent)
 
 NODE_CLASS_MAPPINGS = {
