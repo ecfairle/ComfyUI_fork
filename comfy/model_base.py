@@ -1079,6 +1079,7 @@ def ind_sel(target: torch.Tensor, ind: torch.Tensor, dim: int = 1):
         len(ind.shape) > dim
     ), "Index must have the target dim, but get dim: %d, ind shape: %s" % (dim, str(ind.shape))
 
+    print('ind_sel', target.shape, ind.shape, dim)
     target = target.expand(
         *tuple(
             [ind.shape[k] if target.shape[k] == 1 else -1 for k in range(dim)]
@@ -1154,7 +1155,7 @@ def patch_motion(
         dist_ = (
             (tracks_align[:, None, None] - grid[None, :, :, None]).pow(2).sum(-1)
         )  # T, H, W, N
-        print("dist ")
+        print("dist")
         weight = torch.exp(-dist_ * temperature) * visible_align.clamp(0, 1).view(
             T - 1, 1, 1, N
         )
@@ -1177,14 +1178,13 @@ def patch_motion(
     out_weight = vert_weight.sum(-1) # T - 1, H, W
 
     
-    print("out_weight shape:", vert_index)
+    print("out_weight shape:", vert_index.shape, vert_weight.shape)
     # out feature -> already soft weighted
-    # mix_feature = out_feature + vid[vae_divide[0]:, 1:] * (1 - out_weight.clamp(0, 1))
-    mix_feature = vid[vae_divide[0]:, 1:]
+    mix_feature = out_feature + vid[vae_divide[0]:, 1:] * (1 - out_weight.clamp(0, 1))
 
     out_feature_full = torch.cat([vid[vae_divide[0]:, :1], mix_feature], dim=1) # C, T, H, W
     print("out_feature_full:", out_feature_full)
-    out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), torch.ones_like(out_weight)], dim=0)  # T, H, W
+    out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), out_weight], dim=0)  # T, H, W
     return torch.cat([out_mask_full[None].expand(vae_divide[0], -1, -1, -1), out_feature_full], dim=0)
 
 
