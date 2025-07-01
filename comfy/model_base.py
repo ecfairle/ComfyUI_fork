@@ -1159,6 +1159,7 @@ def patch_motion(
         weight = torch.exp(-dist_ * temperature) * visible_align.clamp(0, 1).view(
             T - 1, 1, 1, N
         )
+        print('weight:', weight.max(), weight.mean())
         vert_weight, vert_index = torch.topk(
             weight, k=min(topk, weight.shape[-1]), dim=-1
         )
