@@ -39,6 +39,7 @@ class WanImageToVideo:
 
             print('start_image:', start_image)
             concat_latent_image = vae.encode(image[:, :, :, :3])
+            print('concat_latent_image:', concat_latent_image)
             mask = torch.ones((1, 1, latent.shape[2], concat_latent_image.shape[-2], concat_latent_image.shape[-1]), device=start_image.device, dtype=start_image.dtype)
             mask[:, :, :((start_image.shape[0] - 1) // 4) + 1] = 0.0
 
