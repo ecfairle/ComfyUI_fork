@@ -697,7 +697,7 @@ class WanTrackToVideo:
         latent = torch.zeros([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8], 
                            device=comfy.model_management.intermediate_device())
         out_latent = {}
-        out_latent["samples"] = latent
+        out_latent["samples"] = y
         return (positive, negative, out_latent)
 
 NODE_CLASS_MAPPINGS = {
