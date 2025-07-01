@@ -1180,7 +1180,7 @@ def patch_motion(
     print("out_weight shape:", vert_index)
     # out feature -> already soft weighted
     # mix_feature = out_feature + vid[vae_divide[0]:, 1:] * (1 - out_weight.clamp(0, 1))
-    mix_feature = vid[vae_divide[0]:, 1:]
+    mix_feature = vid[vae_divide[0]:]
 
     out_feature_full = torch.cat([vid[vae_divide[0]:, :1], mix_feature], dim=1) # C, T, H, W
     print("out_feature_full:", out_feature_full)
