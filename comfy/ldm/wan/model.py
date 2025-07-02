@@ -517,9 +517,11 @@ class WanModel(torch.nn.Module):
 
         print('xtype', x.dtype)
         # time embeddings
-        e = self.time_embedding(
-            sinusoidal_embedding_1d(self.freq_dim, t).to(dtype=x.dtype))
-        e0 = self.time_projection(e).unflatten(1, (6, self.dim))
+        with torch.amp.autocast("cuda", dtype=torch.float32):
+            e = self.time_embedding(
+                sinusoidal_embedding_1d(self.freq_dim, t).float())
+            e0 = self.time_projection(e).unflatten(1, (6, self.dim))
+            assert e.dtype == torch.float32 and e0.dtype == torch.float32
 
         print('x_orig', x.shape)
         # context
