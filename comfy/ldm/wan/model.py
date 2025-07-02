@@ -566,7 +566,7 @@ class WanModel(torch.nn.Module):
             x = torch.cat([x, time_dim_concat], dim=2)
             t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
 
-        img_ids = torch.zeros((t_len, h_len, w_len, 3), device=x.device, dtype=x.dtype)
+        img_ids = torch.zeros((t_len, h_len, w_len, 3), device=x[0].device, dtype=x[0].dtype)
         img_ids[:, :, :, 0] = img_ids[:, :, :, 0] + torch.linspace(0, t_len - 1, steps=t_len, device=x.device, dtype=x.dtype).reshape(-1, 1, 1)
         img_ids[:, :, :, 1] = img_ids[:, :, :, 1] + torch.linspace(0, h_len - 1, steps=h_len, device=x.device, dtype=x.dtype).reshape(1, -1, 1)
         img_ids[:, :, :, 2] = img_ids[:, :, :, 2] + torch.linspace(0, w_len - 1, steps=w_len, device=x.device, dtype=x.dtype).reshape(1, 1, -1)
