@@ -159,6 +159,7 @@ class BaseModel(torch.nn.Module):
         sigma = t
         xc = self.model_sampling.calculate_input(sigma, x)
 
+        print('xc stats: ', xc.min(), xc.max(), xc.mean(), xc.std())
         if c_concat is not None:
             xc = torch.cat([xc] + [c_concat], dim=1)
 

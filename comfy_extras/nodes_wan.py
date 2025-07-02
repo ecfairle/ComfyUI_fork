@@ -695,7 +695,7 @@ class WanTrackToVideo:
             positive = node_helpers.conditioning_set_values(positive, {"clip_vision_output": clip_vision_output})
             negative = node_helpers.conditioning_set_values(negative, {"clip_vision_output": clip_vision_output})
 
-        latent = torch.randn([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8], 
+        latent = torch.zeros([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8], 
                            device=comfy.model_management.intermediate_device())
         out_latent = {}
         out_latent["samples"] = latent
