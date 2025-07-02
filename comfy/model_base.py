@@ -161,7 +161,8 @@ class BaseModel(torch.nn.Module):
 
         print('xc stats: ', xc.min(), xc.max(), xc.mean(), xc.std())
         if c_concat is not None:
-            xc = torch.cat([xc] + [c_concat], dim=1)
+            #xc = torch.cat([xc] + [c_concat], dim=1)
+            xc = [torch.cat([u, v], dim=0) for u, v in zip(xc, c_concat)]
 
         context = c_crossattn
         dtype = self.get_dtype()
