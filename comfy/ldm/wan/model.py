@@ -511,7 +511,7 @@ class WanModel(torch.nn.Module):
         seq_len = seq_lens.max()
         assert seq_lens.max() <= seq_len
         x = torch.cat([
-            torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2))],
+            torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2)).to(x[0].dtype)],
                       dim=1) for u in x
         ])
 
