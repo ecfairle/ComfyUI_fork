@@ -509,6 +509,7 @@ class WanModel(torch.nn.Module):
             sinusoidal_embedding_1d(self.freq_dim, t).to(dtype=x[0].dtype))
         e0 = self.time_projection(e).unflatten(1, (6, self.dim))
 
+        print('x_orig', x.shape, 'y', y.shape)
         # context
         context = self.text_embedding(context)
 
