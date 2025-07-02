@@ -567,9 +567,9 @@ class WanModel(torch.nn.Module):
             t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
 
         img_ids = torch.zeros((t_len, h_len, w_len, 3), device=x[0].device, dtype=x[0].dtype)
-        img_ids[:, :, :, 0] = img_ids[:, :, :, 0] + torch.linspace(0, t_len - 1, steps=t_len, device=x.device, dtype=x.dtype).reshape(-1, 1, 1)
-        img_ids[:, :, :, 1] = img_ids[:, :, :, 1] + torch.linspace(0, h_len - 1, steps=h_len, device=x.device, dtype=x.dtype).reshape(1, -1, 1)
-        img_ids[:, :, :, 2] = img_ids[:, :, :, 2] + torch.linspace(0, w_len - 1, steps=w_len, device=x.device, dtype=x.dtype).reshape(1, 1, -1)
+        img_ids[:, :, :, 0] = img_ids[:, :, :, 0] + torch.linspace(0, t_len - 1, steps=t_len, device=x[0].device, dtype=x[0].dtype).reshape(-1, 1, 1)
+        img_ids[:, :, :, 1] = img_ids[:, :, :, 1] + torch.linspace(0, h_len - 1, steps=h_len, device=x[0].device, dtype=x[0].dtype).reshape(1, -1, 1)
+        img_ids[:, :, :, 2] = img_ids[:, :, :, 2] + torch.linspace(0, w_len - 1, steps=w_len, device=x[0].device, dtype=x[0].dtype).reshape(1, 1, -1)
         img_ids = repeat(img_ids, "t h w c -> b (t h w) c", b=bs)
 
         freqs = self.rope_embedder(img_ids).movedim(1, 2)
