@@ -159,7 +159,7 @@ class BaseModel(torch.nn.Module):
         sigma = t
         xc = self.model_sampling.calculate_input(sigma, x)
 
-        print('xc stats: ', xc.shape, c_concat.shape)
+        print('xc stats: ', xc.shape, c_concat.shape, xc.dtype)
         if c_concat is not None:
             #xc = torch.cat([xc] + [c_concat], dim=1)
             xc = [torch.cat([u, v], dim=0) for u, v in zip(xc, c_concat)]
@@ -187,7 +187,7 @@ class BaseModel(torch.nn.Module):
                 extra = ex
             extra_conds[o] = extra
 
-        t = self.process_timestep(t, x=x[0], **extra_conds)
+        t = self.process_timestep(t, x=x, **extra_conds)
         model_output = self.diffusion_model(xc, t, context=context, control=control, transformer_options=transformer_options, **extra_conds).float()
         return self.model_sampling.calculate_denoised(sigma, model_output, x)
 
