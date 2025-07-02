@@ -554,7 +554,7 @@ class WanModel(torch.nn.Module):
     def forward(self, x, timestep, context, clip_fea=None, time_dim_concat=None, transformer_options={}, **kwargs):
         bs = len(x)
         c, t, h, w = x[0].shape
-        x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size)
+        # x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size)
 
         patch_size = self.patch_size
         t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
