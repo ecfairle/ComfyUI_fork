@@ -170,7 +170,6 @@ class BaseModel(torch.nn.Module):
         if self.manual_cast_dtype is not None:
             dtype = self.manual_cast_dtype
 
-        xc = xc.to(dtype)
         t = self.model_sampling.timestep(t).float()
         if context is not None:
             context = context.to(dtype)
