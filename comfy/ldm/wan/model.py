@@ -596,6 +596,7 @@ class WanModel(torch.nn.Module):
         c = self.out_dim
         out = []
         for u, v in zip(x, grid_sizes):
+            print('unpatchify', u.shape, v, grid_sizes)
             u = u[:math.prod(v)].view(*v, *self.patch_size, c)
             u = torch.einsum('fhwpqrc->cfphqwr', u)
             u = u.reshape(c, *[i * j for i, j in zip(v, self.patch_size)])
