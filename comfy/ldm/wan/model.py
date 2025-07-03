@@ -500,16 +500,27 @@ class WanModel(torch.nn.Module):
                 List of denoised video tensors with original input shapes [C_out, F, H / 8, W / 8]
         """
         # embeddings
-        x = self.patch_embedding(x.float()).to(x.dtype)
-        grid_sizes = x.shape[2:]
-        x = x.flatten(2).transpose(1, 2)
+        # x = self.patch_embedding(x.float()).to(x.dtype)
+        # grid_sizes = x.shape[2:]
+        # x = x.flatten(2).transpose(1, 2)
+        x = [self.patch_embedding(u.unsqueeze(0)) for u in x]
+        grid_sizes = torch.stack(
+            [torch.tensor(u.shape[2:], dtype=torch.long) for u in x])
+        x = [u.flatten(2).transpose(1, 2) for u in x]
+        seq_lens = torch.tensor([u.size(1) for u in x], dtype=torch.long)
+        seq_len = seq_lens.max()
+        assert seq_lens.max() <= seq_len
+        x = torch.cat([
+            torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2)).to(x[0].dtype)],
+                      dim=1) for u in x
+        ])
 
-        print('xtype', x[0].dtype)
         # time embeddings
         e = self.time_embedding(
             sinusoidal_embedding_1d(self.freq_dim, t).to(dtype=x[0].dtype))
         e0 = self.time_projection(e).unflatten(1, (6, self.dim))
 
+        print('x_orig', x.shape)
         # context
         context = self.text_embedding(context)
 
@@ -541,8 +552,9 @@ class WanModel(torch.nn.Module):
         return x
 
     def forward(self, x, timestep, context, clip_fea=None, time_dim_concat=None, transformer_options={}, **kwargs):
-        bs, c, t, h, w = x.shape
-        x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size)
+        bs = len(x)
+        c, t, h, w = x[0].shape
+        # x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size)
 
         patch_size = self.patch_size
         t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
@@ -552,12 +564,12 @@ class WanModel(torch.nn.Module):
         if time_dim_concat is not None:
             time_dim_concat = comfy.ldm.common_dit.pad_to_patch_size(time_dim_concat, self.patch_size)
             x = torch.cat([x, time_dim_concat], dim=2)
-            t_len = ((x.shape[2] + (patch_size[0] // 2)) // patch_size[0])
+            t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
 
-        img_ids = torch.zeros((t_len, h_len, w_len, 3), device=x.device, dtype=x.dtype)
-        img_ids[:, :, :, 0] = img_ids[:, :, :, 0] + torch.linspace(0, t_len - 1, steps=t_len, device=x.device, dtype=x.dtype).reshape(-1, 1, 1)
-        img_ids[:, :, :, 1] = img_ids[:, :, :, 1] + torch.linspace(0, h_len - 1, steps=h_len, device=x.device, dtype=x.dtype).reshape(1, -1, 1)
-        img_ids[:, :, :, 2] = img_ids[:, :, :, 2] + torch.linspace(0, w_len - 1, steps=w_len, device=x.device, dtype=x.dtype).reshape(1, 1, -1)
+        img_ids = torch.zeros((t_len, h_len, w_len, 3), device=x[0].device, dtype=x[0].dtype)
+        img_ids[:, :, :, 0] = img_ids[:, :, :, 0] + torch.linspace(0, t_len - 1, steps=t_len, device=x[0].device, dtype=x[0].dtype).reshape(-1, 1, 1)
+        img_ids[:, :, :, 1] = img_ids[:, :, :, 1] + torch.linspace(0, h_len - 1, steps=h_len, device=x[0].device, dtype=x[0].dtype).reshape(1, -1, 1)
+        img_ids[:, :, :, 2] = img_ids[:, :, :, 2] + torch.linspace(0, w_len - 1, steps=w_len, device=x[0].device, dtype=x[0].dtype).reshape(1, 1, -1)
         img_ids = repeat(img_ids, "t h w c -> b (t h w) c", b=bs)
 
         freqs = self.rope_embedder(img_ids).movedim(1, 2)
