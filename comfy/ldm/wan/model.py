@@ -601,7 +601,7 @@ class WanModel(torch.nn.Module):
             u = torch.einsum('fhwpqrc->cfphqwr', u)
             u = u.reshape(c, *[i * j for i, j in zip(v, self.patch_size)])
             out.append(u)
-        return out
+        return torch.stack(out)
 
 
 class VaceWanModel(WanModel):
