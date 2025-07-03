@@ -159,11 +159,18 @@ class BaseModel(torch.nn.Module):
         sigma = t
         xc = self.model_sampling.calculate_input(sigma, x)
 
+<<<<<<< HEAD
         dtype = self.get_dtype()
         print('xc stats: ', xc.shape, c_concat.shape, xc.dtype)
         if c_concat is not None:
             #xc = torch.cat([xc] + [c_concat], dim=1)
             xc = [torch.cat([u, v], dim=0).to(dtype) for u, v in zip(xc, c_concat)]
+=======
+        print('xc stats: ', xc.shape, c_concat.shape)
+        if c_concat is not None:
+            xc = torch.cat([xc] + [c_concat], dim=1)
+            # xc = [torch.cat([u, v], dim=0) for u, v in zip(xc, c_concat)]
+>>>>>>> 1fc58fe40bacbe215cdb26cc5b805a7c6a4f4028
         
         context = c_crossattn
         
@@ -1212,7 +1219,6 @@ class WAN21(BaseModel):
             shape_image[1] = extra_channels
             image = torch.zeros(shape_image, dtype=noise.dtype, layout=noise.layout, device=noise.device)
         else:
-            image = image.to(device)
             image = utils.common_upscale(image.to(device), noise.shape[-1], noise.shape[-2], "bilinear", "center")
             for i in range(0, image.shape[1], 16):
                 image[:, i: i + 16] = self.process_latent_in(image[:, i: i + 16])
@@ -1225,7 +1231,7 @@ class WAN21(BaseModel):
         if image.shape[1] > (extra_channels - 4):
             image = image[:, :(extra_channels - 4)]
 
-        mask = kwargs.get("concat_mask", kwargs.get("denoise_mask", None)).to(device) if "concat_mask" in kwargs or "denoise_mask" in kwargs else None
+        mask = kwargs.get("concat_mask", kwargs.get("denoise_mask", None)) if "concat_mask" in kwargs or "denoise_mask" in kwargs else None
         if mask is None:
             mask = torch.zeros_like(noise)[:, :4]
         else:
