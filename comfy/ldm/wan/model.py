@@ -192,6 +192,8 @@ class WanAttentionBlock(nn.Module):
         e,
         freqs,
         context,
+        seq_lens,
+        grid_sizes,
         context_img_len=257,
     ):
         r"""
@@ -207,7 +209,7 @@ class WanAttentionBlock(nn.Module):
 
         # self-attention
         y = self.self_attn(
-            self.norm1(x) * (1 + e[1]) + e[0],
+            self.norm1(x).float() * (1 + e[1]) + e[0], seq_lens, grid_sizes,
             freqs)
 
         x = x + y * e[2]
@@ -505,7 +507,7 @@ class WanModel(torch.nn.Module):
         # x = x.flatten(2).transpose(1, 2)
         x = [self.patch_embedding(u.unsqueeze(0)) for u in x]
         grid_sizes = torch.stack(
-            [torch.tensor(u.shape[2:]) for u in x]).tolist()
+            [torch.tensor(u.shape[2:]) for u in x])
         x = [u.flatten(2).transpose(1, 2) for u in x]
         seq_lens = torch.tensor([u.size(1) for u in x])
         seq_len = seq_lens.max()
@@ -543,7 +545,7 @@ class WanModel(torch.nn.Module):
                 out = blocks_replace[("double_block", i)]({"img": x, "txt": context, "vec": e0, "pe": freqs}, {"original_block": block_wrap})
                 x = out["img"]
             else:
-                x = block(x, e=e0, freqs=freqs, context=context, context_img_len=context_img_len)
+                x = block(x, e=e0, freqs=freqs, context=context, seq_lens=seq_lens, grid_sizes=grid_sizes, context_img_len=context_img_len)
 
         # head
         x = self.head(x, e)
@@ -595,7 +597,7 @@ class WanModel(torch.nn.Module):
         c = self.out_dim
         c = self.out_dim
         out = []
-        for u, v in zip(x, grid_sizes):
+        for u, v in zip(x, grid_sizes.tolist()):
             print('unpatchify', u.shape, v, grid_sizes)
             u = u[:math.prod(v)].view(*v, *self.patch_size, c)
             u = torch.einsum('fhwpqrc->cfphqwr', u)
