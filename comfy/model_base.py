@@ -159,10 +159,10 @@ class BaseModel(torch.nn.Module):
         sigma = t
         xc = self.model_sampling.calculate_input(sigma, x)
 
-        print('xc stats: ', xc.shape, c_concat.shape, xc.dtype)
+        print('xc stats: ', xc.shape, c_concat.shape)
         if c_concat is not None:
-            #xc = torch.cat([xc] + [c_concat], dim=1)
-            xc = [torch.cat([u, v], dim=0) for u, v in zip(xc, c_concat)]
+            xc = torch.cat([xc] + [c_concat], dim=1)
+            # xc = [torch.cat([u, v], dim=0) for u, v in zip(xc, c_concat)]
         
         context = c_crossattn
         dtype = self.get_dtype()
