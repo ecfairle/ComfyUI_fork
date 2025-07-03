@@ -8,7 +8,7 @@ from einops import repeat
 
 from comfy.ldm.modules.attention import optimized_attention
 from comfy.ldm.flux.layers import EmbedND
-from comfy.ldm.flux.math import apply_rope
+from comfy.ldm.flux.math import apply_rope, rope_apply
 import comfy.ldm.common_dit
 import comfy.model_management
 
@@ -51,7 +51,7 @@ class WanSelfAttention(nn.Module):
         self.norm_q = operation_settings.get("operations").RMSNorm(dim, eps=eps, elementwise_affine=True, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")) if qk_norm else nn.Identity()
         self.norm_k = operation_settings.get("operations").RMSNorm(dim, eps=eps, elementwise_affine=True, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")) if qk_norm else nn.Identity()
 
-    def forward(self, x, freqs):
+    def forward(self, x, freqs, grid_sizes):
         r"""
         Args:
             x(Tensor): Shape [B, L, num_heads, C / num_heads]
@@ -67,11 +67,10 @@ class WanSelfAttention(nn.Module):
             return q, k, v
 
         q, k, v = qkv_fn(x)
-        q, k = apply_rope(q, k, freqs)
 
         x = optimized_attention(
-            q.view(b, s, n * d),
-            k.view(b, s, n * d),
+            rope_apply(q, grid_sizes, freqs),
+            rope_apply(k, grid_sizes, freqs),
             v,
             heads=self.num_heads,
         )
@@ -209,7 +208,7 @@ class WanAttentionBlock(nn.Module):
 
         # self-attention
         y = self.self_attn(
-            self.norm1(x).float() * (1 + e[1]) + e[0], seq_lens, grid_sizes,
+            self.norm1(x).float() * (1 + e[1]) + e[0], grid_sizes,
             freqs)
 
         x = x + y * e[2]
