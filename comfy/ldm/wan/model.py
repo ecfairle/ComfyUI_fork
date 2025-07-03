@@ -208,7 +208,7 @@ class WanAttentionBlock(nn.Module):
 
         # self-attention
         y = self.self_attn(
-            self.norm1(x).float() * (1 + e[1]) + e[0], grid_sizes,
+            self.norm1(x) * (1 + e[1]) + e[0], grid_sizes,
             freqs)
 
         x = x + y * e[2]
