@@ -316,7 +316,7 @@ class Head(nn.Module):
         self.head = operation_settings.get("operations").Linear(dim, out_dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype"))
 
         # modulation
-        self.modulation = nn.Parameter(torch.randn(1, 2, dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")/ dim**0.5))
+        self.modulation = nn.Parameter(torch.randn(1, 2, dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype"))/ dim**0.5)
 
     def forward(self, x, e):
         r"""
