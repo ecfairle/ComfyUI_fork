@@ -505,13 +505,13 @@ class WanModel(torch.nn.Module):
         # x = x.flatten(2).transpose(1, 2)
         x = [self.patch_embedding(u.unsqueeze(0)) for u in x]
         grid_sizes = torch.stack(
-            [torch.tensor(u.shape[2:], dtype=torch.long) for u in x])
+            [u.shape[2:] for u in x])
         x = [u.flatten(2).transpose(1, 2) for u in x]
-        seq_lens = torch.tensor([u.size(1) for u in x], dtype=torch.long)
+        seq_lens = torch.tensor([u.size(1) for u in x])
         seq_len = seq_lens.max()
         assert seq_lens.max() <= seq_len
         x = torch.cat([
-            torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2)).to()],
+            torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2))],
                       dim=1) for u in x
         ])
 
