@@ -316,7 +316,7 @@ class Head(nn.Module):
         self.head = operation_settings.get("operations").Linear(dim, out_dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype"))
 
         # modulation
-        self.modulation = nn.Parameter(torch.empty(1, 2, dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")))
+        self.modulation = nn.Parameter(torch.randn(1, 2, dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")/ dim**0.5))
 
     def forward(self, x, e):
         r"""
@@ -593,12 +593,14 @@ class WanModel(torch.nn.Module):
         """
 
         c = self.out_dim
-        u = x
-        b = u.shape[0]
-        u = u[:, :math.prod(grid_sizes)].view(b, *grid_sizes, *self.patch_size, c)
-        u = torch.einsum('bfhwpqrc->bcfphqwr', u)
-        u = u.reshape(b, c, *[i * j for i, j in zip(grid_sizes, self.patch_size)])
-        return u
+        c = self.out_dim
+        out = []
+        for u, v in zip(x, grid_sizes):
+            u = u[:math.prod(v)].view(*v, *self.patch_size, c)
+            u = torch.einsum('fhwpqrc->cfphqwr', u)
+            u = u.reshape(c, *[i * j for i, j in zip(v, self.patch_size)])
+            out.append(u)
+        return out
 
 
 class VaceWanModel(WanModel):
