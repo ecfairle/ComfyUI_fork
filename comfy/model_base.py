@@ -164,6 +164,7 @@ class BaseModel(torch.nn.Module):
             dtype = self.manual_cast_dtype
             
         print('xc stats: ', xc.shape, c_concat.shape, xc.dtype)
+        print(f"Conditioning magnitude: {c_concat.abs().mean()}")
         if c_concat is not None:
             #xc = torch.cat([xc] + [c_concat], dim=1)
             xc = [torch.cat([u, v], dim=0).to(dtype) for u, v in zip(xc, c_concat)]
@@ -1187,7 +1188,7 @@ def patch_motion(
 
     out_feature_full = torch.cat([vid[vae_divide[0]:, :1], mix_feature], dim=1) # C, T, H, W
     print("out_feature_full:", out_feature_full)
-    out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), out_weight * .1], dim=0)  # T, H, W
+    out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), out_weight], dim=0)  # T, H, W
     return torch.cat([out_mask_full[None].expand(vae_divide[0], -1, -1, -1), out_feature_full], dim=0)
 
 
