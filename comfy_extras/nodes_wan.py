@@ -39,6 +39,7 @@ class WanImageToVideo:
             mask = torch.ones((1, 1, latent.shape[2], concat_latent_image.shape[-2], concat_latent_image.shape[-1]), device=start_image.device, dtype=start_image.dtype)
             mask[:, :, :((start_image.shape[0] - 1) // 4) + 1] = 0.0
 
+            print('mask shape:', mask.shape)
             positive = node_helpers.conditioning_set_values(positive, {"concat_latent_image": concat_latent_image, "concat_mask": mask})
             negative = node_helpers.conditioning_set_values(negative, {"concat_latent_image": concat_latent_image, "concat_mask": mask})
 
@@ -132,11 +133,11 @@ class WanFirstLastFrameToVideo:
 
         image = torch.ones((length, height, width, 3)) * 0.5
         mask = torch.ones((1, 1, latent.shape[2] * 4, latent.shape[-2], latent.shape[-1]))
-
+    
         if start_image is not None:
             image[:start_image.shape[0]] = start_image
             mask[:, :, :start_image.shape[0] + 3] = 0.0
-
+    
         if end_image is not None:
             image[-end_image.shape[0]:] = end_image
             mask[:, :, -end_image.shape[0]:] = 0.0
