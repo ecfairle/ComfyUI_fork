@@ -503,7 +503,7 @@ class WanModel(torch.nn.Module):
         # x = self.patch_embedding(x.float()).to(x.dtype)
         # grid_sizes = x.shape[2:]
         # x = x.flatten(2).transpose(1, 2)
-        x = [self.patch_embedding(u.unsqueeze(0)) for u in x]
+        x = [self.patch_embedding(u.unsqueeze(0).float()).to(x[0].dtype) for u in x]
         grid_sizes = torch.stack(
             [torch.tensor(u.shape[2:]) for u in x]).tolist()
         x = [u.flatten(2).transpose(1, 2) for u in x]
@@ -550,7 +550,7 @@ class WanModel(torch.nn.Module):
 
         # unpatchify
         x = self.unpatchify(x, grid_sizes)
-        return [u.float() for u in x]
+        return x
 
     def forward(self, x, timestep, context, clip_fea=None, time_dim_concat=None, transformer_options={}, **kwargs):
         bs = len(x)
