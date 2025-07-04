@@ -761,7 +761,7 @@ class WanTrackToVideo:
                 print(f"WanTrackToVideo.encode: Final mask shape: {msk.shape}")
                 print(f"WanTrackToVideo.encode: Final mask value range: min={msk.min():.4f}, max={msk.max():.4f}, mean={msk.mean():.4f}")
 
-                zero_frames = torch.zeros(3, 81 - 1, height, width)
+                zero_frames = torch.ones(3, 81 - 1, height, width)
                 print(f"WanTrackToVideo.encode: Zero frames shape: {zero_frames.shape}")
                 print(f"WanTrackToVideo.encode: Zero frames value range: min={zero_frames.min():.4f}, max={zero_frames.max():.4f}, mean={zero_frames.mean():.4f}")
                 
