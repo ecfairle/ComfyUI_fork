@@ -37,11 +37,15 @@ def rope(pos: Tensor, dim: int, theta: int) -> Tensor:
 
 
 def apply_rope(xq: Tensor, xk: Tensor, freqs_cis: Tensor):
+    print(f"apply_rope: input shapes - xq: {xq.shape}, xk: {xk.shape}, freqs_cis: {freqs_cis.shape}")
     xq_ = xq.to(dtype=freqs_cis.dtype).reshape(*xq.shape[:-1], -1, 1, 2)
     xk_ = xk.to(dtype=freqs_cis.dtype).reshape(*xk.shape[:-1], -1, 1, 2)
     xq_out = freqs_cis[..., 0] * xq_[..., 0] + freqs_cis[..., 1] * xq_[..., 1]
     xk_out = freqs_cis[..., 0] * xk_[..., 0] + freqs_cis[..., 1] * xk_[..., 1]
-    return xq_out.reshape(*xq.shape).type_as(xq), xk_out.reshape(*xk.shape).type_as(xk)
+    result_q = xq_out.reshape(*xq.shape).type_as(xq)
+    result_k = xk_out.reshape(*xk.shape).type_as(xk)
+    print(f"apply_rope: output shapes - result_q: {result_q.shape}, result_k: {result_k.shape}")
+    return result_q, result_k
 
 def rope_apply(x, grid_sizes, freqs):
     n, c = x.size(2), x.size(3) // 2

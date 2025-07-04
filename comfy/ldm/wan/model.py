@@ -553,27 +553,36 @@ class WanModel(torch.nn.Module):
         return x
 
     def forward(self, x, timestep, context, clip_fea=None, time_dim_concat=None, transformer_options={}, **kwargs):
+        print(f"WanModel.forward: Starting preprocessing - input batch size: {len(x)}")
         bs = len(x)
         c, t, h, w = x[0].shape
+        print(f"WanModel.forward: Input tensor shape: c={c}, t={t}, h={h}, w={w}")
         # x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size)
 
         patch_size = self.patch_size
+        print(f"WanModel.forward: Patch size: {patch_size}")
         t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
         h_len = ((h + (patch_size[1] // 2)) // patch_size[1])
         w_len = ((w + (patch_size[2] // 2)) // patch_size[2])
+        print(f"WanModel.forward: Calculated patch dimensions: t_len={t_len}, h_len={h_len}, w_len={w_len}")
 
         if time_dim_concat is not None:
+            print(f"WanModel.forward: Processing time_dim_concat with shape: {time_dim_concat.shape}")
             time_dim_concat = comfy.ldm.common_dit.pad_to_patch_size(time_dim_concat, self.patch_size)
             x = torch.cat([x, time_dim_concat], dim=2)
             t_len = ((t + (patch_size[0] // 2)) // patch_size[0])
 
+        print(f"WanModel.forward: Creating img_ids tensor with shape: ({t_len}, {h_len}, {w_len}, 3)")
         img_ids = torch.zeros((t_len, h_len, w_len, 3), device=x[0].device, dtype=x[0].dtype)
         img_ids[:, :, :, 0] = img_ids[:, :, :, 0] + torch.linspace(0, t_len - 1, steps=t_len, device=x[0].device, dtype=x[0].dtype).reshape(-1, 1, 1)
         img_ids[:, :, :, 1] = img_ids[:, :, :, 1] + torch.linspace(0, h_len - 1, steps=h_len, device=x[0].device, dtype=x[0].dtype).reshape(1, -1, 1)
         img_ids[:, :, :, 2] = img_ids[:, :, :, 2] + torch.linspace(0, w_len - 1, steps=w_len, device=x[0].device, dtype=x[0].dtype).reshape(1, 1, -1)
         img_ids = repeat(img_ids, "t h w c -> b (t h w) c", b=bs)
+        print(f"WanModel.forward: Final img_ids shape: {img_ids.shape}")
 
+        print(f"WanModel.forward: Computing rope embeddings")
         freqs = self.rope_embedder(img_ids).movedim(1, 2)
+        print(f"WanModel.forward: Rope embeddings shape: {freqs.shape}")
         return self.forward_orig(x, timestep, context, clip_fea=clip_fea, freqs=freqs, transformer_options=transformer_options, **kwargs)[:, :, :t, :h, :w]
 
     def unpatchify(self, x, grid_sizes):
