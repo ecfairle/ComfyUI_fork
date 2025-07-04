@@ -1183,11 +1183,11 @@ def patch_motion(
     
     print("out_weight shape:", out_feature.min(), out_feature.max(), out_feature.mean())
     # out feature -> already soft weighted
-    mix_feature = out_feature * .1 + vid[vae_divide[0]:, 1:] * (1 - out_weight.clamp(0, 1))
+    mix_feature = out_feature + vid[vae_divide[0]:, 1:] * (1 - out_weight.clamp(0, 1))
 
     out_feature_full = torch.cat([vid[vae_divide[0]:, :1], mix_feature], dim=1) # C, T, H, W
     print("out_feature_full:", out_feature_full)
-    out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), out_weight], dim=0)  # T, H, W
+    out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), out_weight * .1], dim=0)  # T, H, W
     return torch.cat([out_mask_full[None].expand(vae_divide[0], -1, -1, -1), out_feature_full], dim=0)
 
 
