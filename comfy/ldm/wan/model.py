@@ -8,7 +8,7 @@ from einops import repeat
 
 from comfy.ldm.modules.attention import optimized_attention
 from comfy.ldm.flux.layers import EmbedND
-from comfy.ldm.flux.math import apply_rope, rope_apply
+from comfy.ldm.flux.math import apply_rope
 import comfy.ldm.common_dit
 import comfy.model_management
 
@@ -51,7 +51,7 @@ class WanSelfAttention(nn.Module):
         self.norm_q = operation_settings.get("operations").RMSNorm(dim, eps=eps, elementwise_affine=True, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")) if qk_norm else nn.Identity()
         self.norm_k = operation_settings.get("operations").RMSNorm(dim, eps=eps, elementwise_affine=True, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")) if qk_norm else nn.Identity()
 
-    def forward(self, x, freqs, grid_sizes):
+    def forward(self, x, freqs):
         r"""
         Args:
             x(Tensor): Shape [B, L, num_heads, C / num_heads]
@@ -67,10 +67,11 @@ class WanSelfAttention(nn.Module):
             return q, k, v
 
         q, k, v = qkv_fn(x)
+        q, k = apply_rope(q, k, freqs)
 
         x = optimized_attention(
-            rope_apply(q, grid_sizes, freqs),
-            rope_apply(k, grid_sizes, freqs),
+            q.view(b, s, n * d),
+            k.view(b, s, n * d),
             v,
             heads=self.num_heads,
         )
@@ -191,8 +192,6 @@ class WanAttentionBlock(nn.Module):
         e,
         freqs,
         context,
-        seq_lens,
-        grid_sizes,
         context_img_len=257,
     ):
         r"""
@@ -208,7 +207,7 @@ class WanAttentionBlock(nn.Module):
 
         # self-attention
         y = self.self_attn(
-            self.norm1(x) * (1 + e[1]) + e[0], grid_sizes,
+            self.norm1(x) * (1 + e[1]) + e[0],
             freqs)
 
         x = x + y * e[2]
@@ -506,7 +505,7 @@ class WanModel(torch.nn.Module):
         # x = x.flatten(2).transpose(1, 2)
         x = [self.patch_embedding(u.unsqueeze(0)) for u in x]
         grid_sizes = torch.stack(
-            [torch.tensor(u.shape[2:]) for u in x])
+            [torch.tensor(u.shape[2:]) for u in x]).tolist()
         x = [u.flatten(2).transpose(1, 2) for u in x]
         seq_lens = torch.tensor([u.size(1) for u in x])
         seq_len = seq_lens.max()
@@ -544,14 +543,14 @@ class WanModel(torch.nn.Module):
                 out = blocks_replace[("double_block", i)]({"img": x, "txt": context, "vec": e0, "pe": freqs}, {"original_block": block_wrap})
                 x = out["img"]
             else:
-                x = block(x, e=e0, freqs=freqs, context=context, seq_lens=seq_lens, grid_sizes=grid_sizes, context_img_len=context_img_len)
+                x = block(x, e=e0, freqs=freqs, context=context, context_img_len=context_img_len)
 
         # head
         x = self.head(x, e)
 
         # unpatchify
         x = self.unpatchify(x, grid_sizes)
-        return x
+        return [u.float() for u in x]
 
     def forward(self, x, timestep, context, clip_fea=None, time_dim_concat=None, transformer_options={}, **kwargs):
         bs = len(x)
@@ -596,7 +595,7 @@ class WanModel(torch.nn.Module):
         c = self.out_dim
         c = self.out_dim
         out = []
-        for u, v in zip(x, grid_sizes.tolist()):
+        for u, v in zip(x, grid_sizes):
             print('unpatchify', u.shape, v, grid_sizes)
             u = u[:math.prod(v)].view(*v, *self.patch_size, c)
             u = torch.einsum('fhwpqrc->cfphqwr', u)
