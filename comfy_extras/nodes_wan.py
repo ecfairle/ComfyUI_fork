@@ -731,7 +731,7 @@ class WanTrackToVideo:
             if start_image is not None:
                 print(f"WanTrackToVideo.encode: Processing start image with shape: {start_image.shape}")
                 print(f"WanTrackToVideo.encode: Start image value range: min={start_image.min():.4f}, max={start_image.max():.4f}, mean={start_image.mean():.4f}")
-                start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
+                start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1) * 0.5
                 print(f"WanTrackToVideo.encode: Upscaled start image shape: {start_image.shape}")
                 print(f"WanTrackToVideo.encode: Upscaled start image value range: min={start_image.min():.4f}, max={start_image.max():.4f}, mean={start_image.mean():.4f}")
                 
