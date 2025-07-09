@@ -167,7 +167,7 @@ class BaseModel(torch.nn.Module):
             xc = torch.cat([xc] + [c_concat], dim=1)
         
         context = c_crossattn
-        
+        xc = xc.to(dtype)
 
         t = self.model_sampling.timestep(t).float()
         if context is not None:
@@ -1227,7 +1227,7 @@ class WAN21(BaseModel):
 
         tracks = kwargs.get("tracks", None)
         if tracks is not None:
-            res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None].to(res.dtype)
+            res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None]
 
         return res
 
