@@ -37,9 +37,7 @@ class WanImageToVideo:
             image = torch.ones((length, height, width, start_image.shape[-1]), device=start_image.device, dtype=start_image.dtype) * 0.5
             image[:start_image.shape[0]] = start_image
 
-            print('start_image:', start_image)
             concat_latent_image = vae.encode(image[:, :, :, :3])
-            print('concat_latent_image:', concat_latent_image)
             mask = torch.ones((1, 1, latent.shape[2], concat_latent_image.shape[-2], concat_latent_image.shape[-1]), device=start_image.device, dtype=start_image.dtype)
             mask[:, :, :((start_image.shape[0] - 1) // 4) + 1] = 0.0
 
@@ -568,58 +566,60 @@ class WanTrackToVideo:
         # Parse tracks from JSON
         tracks_data = parse_json_tracks(tracks)
         
-        # Convert tracks to tensor format
-        arrs = []
-        for i, track in enumerate(tracks_data):
-            pts = pad_pts(track)
-            arrs.append(pts)
+        if tracks_data:
+            # Convert tracks to tensor format
+            arrs = []
+            for i, track in enumerate(tracks_data):
+                pts = pad_pts(track)
+                arrs.append(pts)
 
-        tracks_np = np.stack(arrs, axis=0)
-        processed_tracks = process_tracks(tracks_np, (width, height)).unsqueeze(0)
-        
-        start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
-        
-        lat_h = height // 8
-        lat_w = width // 8
+            tracks_np = np.stack(arrs, axis=0)
+            processed_tracks = process_tracks(tracks_np, (width, height)).unsqueeze(0)
+            
+            if start_image is not None:
+                start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
+                
+                lat_h = height // 8
+                lat_w = width // 8
 
-        msk = torch.ones(1, 81, lat_h, lat_w, device=start_image.device)
-        msk[:, 1:] = 0
-        
-        # repeat first frame 4 times
-        msk = torch.concat([
-            torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]
-        ],
-            dim=1)
+                msk = torch.ones(1, 81, lat_h, lat_w, device=start_image.device)
+                msk[:, 1:] = 0
+                
+                # repeat first frame 4 times
+                msk = torch.concat([
+                    torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]
+                ],
+                    dim=1)
 
-        # Reshape mask into groups of 4 frames
-        msk = msk.view(1, msk.shape[1] // 4, 4, lat_h, lat_w)
+                # Reshape mask into groups of 4 frames
+                msk = msk.view(1, msk.shape[1] // 4, 4, lat_h, lat_w)
 
-        # first batch
-        msk = msk.transpose(1, 2)
+                # first batch
+                msk = msk.transpose(1, 2)
 
-        zero_frames = torch.ones(3, 81 - 1, height, width) * .5
-        
-        start_image = start_image.permute(3,0,1,2) # C, T, H, W
-        res = torch.concat([
-                start_image.to(start_image.device),
-                zero_frames
-            ],
-                dim=1).to(start_image.device)
+                zero_frames = torch.ones(3, 81 - 1, height, width) * .5
+                
+                start_image = start_image.permute(3,0,1,2) # C, T, H, W
+                res = torch.concat([
+                        start_image.to(start_image.device),
+                        zero_frames
+                    ],
+                        dim=1).to(start_image.device)
 
-        res = res.permute(1,2,3,0)[:, :, :, :3]  # T, H, W, C
-        
-        y = vae.encode(res)
-        
-        # Add motion features to conditioning
-        positive = node_helpers.conditioning_set_values(positive,
-                                                        {"tracks": processed_tracks,
-                                                            "concat_mask": msk,
-                                                        "concat_latent_image": y})
-        negative = node_helpers.conditioning_set_values(negative, 
-                                                        {"tracks": processed_tracks,
-                                                            "concat_mask": msk,
-                                                        "concat_latent_image": y})
-        
+                res = res.permute(1,2,3,0)[:, :, :, :3]  # T, H, W, C
+                
+                y = vae.encode(res)
+                
+                # Add motion features to conditioning
+                positive = node_helpers.conditioning_set_values(positive,
+                                                                {"tracks": processed_tracks,
+                                                                 "concat_mask": msk,
+                                                                "concat_latent_image": y})
+                negative = node_helpers.conditioning_set_values(negative, 
+                                                                {"tracks": processed_tracks,
+                                                                 "concat_mask": msk,
+                                                                "concat_latent_image": y})
+                
 
         # Handle clip vision output if provided
         if clip_vision_output is not None:
