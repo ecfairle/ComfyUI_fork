@@ -1082,7 +1082,6 @@ def ind_sel(target: torch.Tensor, ind: torch.Tensor, dim: int = 1):
         len(ind.shape) > dim
     ), "Index must have the target dim, but get dim: %d, ind shape: %s" % (dim, str(ind.shape))
 
-    print('ind_sel', target.shape, ind.shape, dim)
     target = target.expand(
         *tuple(
             [ind.shape[k] if target.shape[k] == 1 else -1 for k in range(dim)]
@@ -1130,8 +1129,6 @@ def patch_motion(
 ):
     """Apply motion patching based on tracks"""
     with torch.no_grad():
-        print("vid shape:", vid[4,0])
-        print("vid shape:", vid[4,10])
         _, T, H, W = vid.shape
         N = tracks.shape[2]
         _, tracks_xy, visible = torch.split(
@@ -1158,11 +1155,9 @@ def patch_motion(
         dist_ = (
             (tracks_align[:, None, None] - grid[None, :, :, None]).pow(2).sum(-1)
         )  # T, H, W, N
-        print("dist")
         weight = torch.exp(-dist_ * temperature) * visible_align.clamp(0, 1).view(
             T - 1, 1, 1, N
         )
-        print('weight:', weight.max(), weight.mean())
         vert_weight, vert_index = torch.topk(
             weight, k=min(topk, weight.shape[-1]), dim=-1
         )
@@ -1177,20 +1172,15 @@ def patch_motion(
     )
     point_feature = point_feature.squeeze(0).squeeze(1).permute(1, 0) # N, C=16
 
-    print("point_feature shape:", point_feature.shape)
     out_feature = merge_final(point_feature, vert_weight, vert_index).permute(3, 0, 1, 2) # T - 1, H, W, C => C, T - 1, H, W
     out_weight = vert_weight.sum(-1) # T - 1, H, W
 
-    
-    print("out_weight shape:", out_feature.min(), out_feature.max(), out_feature.mean())
     # out feature -> already soft weighted
     mix_feature = out_feature + vid[vae_divide[0]:, 1:] * (1 - out_weight.clamp(0, 1))
 
     out_feature_full = torch.cat([vid[vae_divide[0]:, :1], mix_feature], dim=1) # C, T, H, W
-    print("out_feature_full:", out_feature_full)
     out_mask_full = torch.cat([torch.ones_like(out_weight[:1]), out_weight], dim=0)  # T, H, W
     return torch.cat([out_mask_full[None].expand(vae_divide[0], -1, -1, -1), out_feature_full], dim=0)
-
 
 class WAN21(BaseModel):
     def __init__(self, model_config, model_type=ModelType.FLOW, image_to_video=False, device=None):
@@ -1198,95 +1188,50 @@ class WAN21(BaseModel):
         self.image_to_video = image_to_video
 
     def concat_cond(self, **kwargs):
-        print(f"WAN21.concat_cond: Starting concatenation conditioning")
         noise = kwargs.get("noise", None)
-        print(f"WAN21.concat_cond: Input noise shape: {noise.shape}, value range: min={noise.min():.4f}, max={noise.max():.4f}, mean={noise.mean():.4f}")
-        
         extra_channels = self.diffusion_model.patch_embedding.weight.shape[1] - noise.shape[1]
-        print(f"WAN21.concat_cond: extra channels: {extra_channels}, noise shape: {noise.shape}, patch embedding weight shape: {self.diffusion_model.patch_embedding.weight.shape}")
         if extra_channels == 0:
-            print(f"WAN21.concat_cond: No extra channels needed, returning None")
             return None
 
         image = kwargs.get("concat_latent_image", None)
         device = kwargs["device"]
-        print(f"WAN21.concat_cond: Processing image, device: {device}")
 
         if image is None:
-            print(f"WAN21.concat_cond: No image provided, creating zero tensor")
             shape_image = list(noise.shape)
             shape_image[1] = extra_channels
             image = torch.zeros(shape_image, dtype=noise.dtype, layout=noise.layout, device=noise.device)
-            print(f"WAN21.concat_cond: Created zero image tensor - shape: {image.shape}, value range: min={image.min():.4f}, max={image.max():.4f}")
         else:
-            print(f"WAN21.concat_cond: Processing input image with shape: {image.shape}")
-            print(f"WAN21.concat_cond: Input image value range: min={image.min():.4f}, max={image.max():.4f}, mean={image.mean():.4f}")
-            
             image = utils.common_upscale(image.to(device), noise.shape[-1], noise.shape[-2], "bilinear", "center")
-            print(f"WAN21.concat_cond: Image after upscale - shape: {image.shape}, value range: min={image.min():.4f}, max={image.max():.4f}")
-            
             for i in range(0, image.shape[1], 16):
                 image[:, i: i + 16] = self.process_latent_in(image[:, i: i + 16])
-            print(f"WAN21.concat_cond: Image after process_latent_in - value range: min={image.min():.4f}, max={image.max():.4f}")
-            
             image = utils.resize_to_batch_size(image, noise.shape[0])
-            print(f"WAN21.concat_cond: Image after resize_to_batch_size - shape: {image.shape}, value range: min={image.min():.4f}, max={image.max():.4f}")
 
         if not self.image_to_video or extra_channels == image.shape[1]:
-            print(f"WAN21.concat_cond: Returning image directly (no video mode or exact channel match)")
-            print(f"WAN21.concat_cond: Direct return image value range: min={image.min():.4f}, max={image.max():.4f}")
             return image
 
         if image.shape[1] > (extra_channels - 4):
-            print(f"WAN21.concat_cond: Trimming image channels from {image.shape[1]} to {extra_channels - 4}")
             image = image[:, :(extra_channels - 4)]
-            print(f"WAN21.concat_cond: Image after trimming - shape: {image.shape}, value range: min={image.min():.4f}, max={image.max():.4f}")
 
-        print(f"WAN21.concat_cond: Processing mask")
         mask = kwargs.get("concat_mask", kwargs.get("denoise_mask", None)) if "concat_mask" in kwargs or "denoise_mask" in kwargs else None
         if mask is None:
-            print(f"WAN21.concat_cond: No mask provided, creating zero mask")
             mask = torch.zeros_like(noise)[:, :4]
-            print(f"WAN21.concat_cond: Created zero mask - shape: {mask.shape}, value range: min={mask.min():.4f}, max={mask.max():.4f}")
         else:
-            print(f"WAN21.concat_cond: Processing provided mask with shape: {mask.shape}")
-            print(f"WAN21.concat_cond: Input mask value range: min={mask.min():.4f}, max={mask.max():.4f}, mean={mask.mean():.4f}")
-            
             if mask.shape[1] != 4:
                 mask = torch.mean(mask, dim=1, keepdim=True)
-                print(f"WAN21.concat_cond: Mask after mean - shape: {mask.shape}, value range: min={mask.min():.4f}, max={mask.max():.4f}")
-                
             mask = 1.0 - mask
-            print(f"WAN21.concat_cond: Mask after inversion - value range: min={mask.min():.4f}, max={mask.max():.4f}")
-            
             mask = utils.common_upscale(mask.to(device), noise.shape[-1], noise.shape[-2], "bilinear", "center")
-            print(f"WAN21.concat_cond: Mask after upscale - shape: {mask.shape}, value range: min={mask.min():.4f}, max={mask.max():.4f}")
-            
             if mask.shape[-3] < noise.shape[-3]:
                 mask = torch.nn.functional.pad(mask, (0, 0, 0, 0, 0, noise.shape[-3] - mask.shape[-3]), mode='constant', value=0)
-                print(f"WAN21.concat_cond: Mask after padding - shape: {mask.shape}, value range: min={mask.min():.4f}, max={mask.max():.4f}")
-                
             if mask.shape[1] == 1:
                 mask = mask.repeat(1, 4, 1, 1, 1)
-                print(f"WAN21.concat_cond: Mask after repeat - shape: {mask.shape}, value range: min={mask.min():.4f}, max={mask.max():.4f}")
-            
             mask = utils.resize_to_batch_size(mask, noise.shape[0])
-            print(f"WAN21.concat_cond: Mask after resize_to_batch_size - shape: {mask.shape}, value range: min={mask.min():.4f}, max={mask.max():.4f}")
-            
-        print(f"WAN21.concat_cond: Final shapes before concat - image: {image.shape}, mask: {mask.shape}")
+
         res = torch.cat((mask, image), dim=1)
-        print(f"WAN21.concat_cond: Result after concatenation - shape: {res.shape}, value range: min={res.min():.4f}, max={res.max():.4f}")
-        
+
         tracks = kwargs.get("tracks", None)
         if tracks is not None:
-            print(f"WAN21.concat_cond: Processing tracks with shape: {tracks.shape}")
-            print(f"WAN21.concat_cond: Tracks value range: min={tracks.min():.4f}, max={tracks.max():.4f}, mean={tracks.mean():.4f}")
-            print(f"WAN21.concat_cond: Input to patch_motion - res[0] shape: {res[0].shape}, value range: min={res[0].min():.4f}, max={res[0].max():.4f}")
-            
             res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None]
-            print(f"WAN21.concat_cond: Result after patch_motion - shape: {res.shape}, value range: min={res.min():.4f}, max={res.max():.4f}")
-        
-        print(f"WAN21.concat_cond: Final result - shape: {res.shape}, value range: min={res.min():.4f}, max={res.max():.4f}")
+
         return res
 
 
