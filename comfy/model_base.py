@@ -162,12 +162,9 @@ class BaseModel(torch.nn.Module):
         dtype = self.get_dtype()
         if self.manual_cast_dtype is not None:
             dtype = self.manual_cast_dtype
-            
-        print('xc stats: ', xc.shape, c_concat.shape, xc.dtype)
-        print(f"Conditioning magnitude: {c_concat.abs().mean()}")
+        
         if c_concat is not None:
-            #xc = torch.cat([xc] + [c_concat], dim=1)
-            xc = [torch.cat([u, v], dim=0).to(dtype) for u, v in zip(xc, c_concat)]
+            xc = torch.cat([xc] + [c_concat], dim=1)
         
         context = c_crossattn
         
