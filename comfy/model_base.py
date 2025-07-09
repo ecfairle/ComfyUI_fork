@@ -159,15 +159,14 @@ class BaseModel(torch.nn.Module):
         sigma = t
         xc = self.model_sampling.calculate_input(sigma, x)
 
-        dtype = self.get_dtype()
-        if self.manual_cast_dtype is not None:
-            dtype = self.manual_cast_dtype
-        
         if c_concat is not None:
             xc = torch.cat([xc] + [c_concat], dim=1)
-        
+
         context = c_crossattn
-        xc = xc.to(dtype)
+        dtype = self.get_dtype()
+
+        if self.manual_cast_dtype is not None:
+            dtype = self.manual_cast_dtype
 
         t = self.model_sampling.timestep(t).float()
         if context is not None:
