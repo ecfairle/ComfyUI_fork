@@ -490,7 +490,7 @@ def merge_final(vert_attr: torch.Tensor, weight: torch.Tensor, vert_assign: torc
     final_attr = torch.sum(sel_attr * weight.unsqueeze(-1), dim=-2)
     return final_attr
 
-def process_tracks(tracks_np: np.ndarray, frame_size: Tuple[int, int], quant_multi: int = 8, **kwargs):
+def process_tracks(tracks_np: np.ndarray, frame_size: Tuple[int, int], num_seconds, quant_multi: int = 8, **kwargs):
     # tracks: shape [t, h, w, 3] => samples align with 24 fps, model trained with 16 fps.
     # frame_size: tuple (W, H)
     tracks = torch.from_numpy(tracks_np).float()
@@ -516,7 +516,8 @@ def process_tracks(tracks_np: np.ndarray, frame_size: Tuple[int, int], quant_mul
     out_0 = out_[:1]
     
     out_l = out_[1:] # 121 => 120 | 1
-    out_l = torch.repeat_interleave(out_l, 2, dim=0)[1::3]  # 120 => 240 => 80
+    sample_every = 240 // 16 // num_seconds
+    out_l = torch.repeat_interleave(out_l, 2, dim=0)[1::sample_every]  # 120 => 240 => F
     
     final_result = torch.cat([out_0, out_l], dim=0)
     
@@ -575,7 +576,8 @@ class WanTrackToVideo:
                 arrs.append(pts)
 
             tracks_np = np.stack(arrs, axis=0)
-            processed_tracks = process_tracks(tracks_np, (width, height)).unsqueeze(0)
+            num_seconds = (length - 1) // 16
+            processed_tracks = process_tracks(tracks_np, (width, height), num_seconds).unsqueeze(0)
             
             if start_image is not None:
                 start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
