@@ -565,7 +565,8 @@ class WanTrackToVideo:
         
         # Parse tracks from JSON
         tracks_data = parse_json_tracks(tracks)
-        
+        latent = torch.zeros([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8], 
+                           device=comfy.model_management.intermediate_device())
         if tracks_data:
             # Convert tracks to tensor format
             arrs = []
@@ -582,7 +583,7 @@ class WanTrackToVideo:
                 lat_h = height // 8
                 lat_w = width // 8
 
-                msk = torch.ones(1, 81, lat_h, lat_w, device=start_image.device)
+                msk = torch.ones(1, latent.shape[2], lat_h, lat_w, device=start_image.device)
                 msk[:, 1:] = 0
                 
                 # repeat first frame 4 times
@@ -597,12 +598,12 @@ class WanTrackToVideo:
                 # first batch
                 msk = msk.transpose(1, 2)
 
-                zero_frames = torch.ones(3, 81 - 1, height, width) * .5
+                dummy_frames = torch.ones(3, length - 1, height, width) * .5
                 
                 start_image = start_image.permute(3,0,1,2) # C, T, H, W
                 res = torch.concat([
                         start_image.to(start_image.device),
-                        zero_frames
+                        dummy_frames
                     ],
                         dim=1).to(start_image.device)
 
@@ -626,8 +627,6 @@ class WanTrackToVideo:
             positive = node_helpers.conditioning_set_values(positive, {"clip_vision_output": clip_vision_output})
             negative = node_helpers.conditioning_set_values(negative, {"clip_vision_output": clip_vision_output})
 
-        latent = torch.zeros([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8], 
-                           device=comfy.model_management.intermediate_device())
         out_latent = {}
         out_latent["samples"] = latent
         return (positive, negative, out_latent)
