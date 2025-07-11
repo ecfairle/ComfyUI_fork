@@ -578,7 +578,6 @@ class WanTrackToVideo:
                 arrs.append(pts)
 
             tracks_np = np.stack(arrs, axis=0)
-            num_seconds = (length - 1) // 16
             processed_tracks = process_tracks(tracks_np, (width, height), length - 1).unsqueeze(0)
             
             if start_image is not None:
