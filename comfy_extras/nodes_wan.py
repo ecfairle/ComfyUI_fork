@@ -618,11 +618,15 @@ class WanTrackToVideo:
                 positive = node_helpers.conditioning_set_values(positive,
                                                                 {"tracks": processed_tracks,
                                                                  "concat_mask": msk,
-                                                                "concat_latent_image": y})
+                                                                "concat_latent_image": y,
+                                                                "ati_temperature": temperature,
+                                                                 "ati_topk": topk})
                 negative = node_helpers.conditioning_set_values(negative, 
                                                                 {"tracks": processed_tracks,
                                                                  "concat_mask": msk,
-                                                                "concat_latent_image": y})
+                                                                "concat_latent_image": y,
+                                                                "ati_temperature": temperature,
+                                                                 "ati_topk": topk})
                 
 
         # Handle clip vision output if provided
