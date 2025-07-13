@@ -1230,6 +1230,7 @@ class WAN21(BaseModel):
             res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None]
         
         print("res stats", res.shape, res.min(), res.max(), res.mean(), res.std())
+        torch.save(res, "res.pt")
 
         return res
 
