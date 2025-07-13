@@ -526,6 +526,7 @@ class WanTrackToVideo:
         if not tracks_data:
             return WanImageToVideo().encode(positive, negative, vae, width, height, length, batch_size, start_image=start_image, clip_vision_output=clip_vision_output)
 
+        print("loaded tracks data")
         latent = torch.zeros([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8],
                            device=comfy.model_management.intermediate_device())
         # Convert tracks to tensor format
