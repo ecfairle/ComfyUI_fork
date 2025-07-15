@@ -1227,6 +1227,7 @@ class WAN21(BaseModel):
 
         tracks = kwargs.get("tracks", None)
         if tracks is not None:
+            torch.save(tracks, "tracks.pt")
             res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None]
         
         print("res stats", res.shape, res.min(), res.max(), res.mean(), res.std())
