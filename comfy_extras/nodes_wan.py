@@ -544,7 +544,7 @@ def _patch_motion_single(
 ):
     """Apply motion patching for a single batch of tracks"""
     _, T, H, W = vid.shape
-    N = tracks.shape[1]
+    N = tracks.shape[2]
     
     _, tracks_xy, visible = torch.split(
         tracks, [1, 2, 1], dim=-1
