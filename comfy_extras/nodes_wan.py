@@ -627,7 +627,7 @@ def patch_motion(
         out_mask_full: Batched mask tensor (B, C, T, H, W)
         out_feature_full: Batched feature tensor (B, C, T, H, W)
     """
-    B = tracks.shape[0]
+    B = len(tracks)
     
     # Process each batch separately
     out_masks = []
@@ -702,8 +702,6 @@ class WanTrackToVideo:
             tracks_np = np.stack(arrs, axis=0)
             processed_tracks.append(process_tracks(tracks_np, (width, height), length - 1).unsqueeze(0))
         
-        processed_tracks = torch.cat(processed_tracks, dim=0)
-
         print(f"processed tracks shape: {processed_tracks.shape}")
         if start_image is not None:
             torch.save(start_image, "start_image.pt")
