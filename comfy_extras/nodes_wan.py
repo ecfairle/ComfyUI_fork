@@ -702,7 +702,6 @@ class WanTrackToVideo:
             tracks_np = np.stack(arrs, axis=0)
             processed_tracks.append(process_tracks(tracks_np, (width, height), length - 1).unsqueeze(0))
         
-        print(f"processed tracks shape: {processed_tracks.shape}")
         if start_image is not None:
             torch.save(start_image, "start_image.pt")
             start_image = comfy.utils.common_upscale(start_image[:length].movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
@@ -737,7 +736,6 @@ class WanTrackToVideo:
             res = res.permute(1,2,3,0)[:, :, :, :3]  # T, H, W, C
 
             y = vae.encode(res)
-            torch.save(processed_tracks, "tracks_final.pt")
             torch.save(comfy.latent_formats.Wan21().process_in(y), "y.pt")
             # y = comfy.latent_formats.Wan21().process_in(y)
             mask = msk
