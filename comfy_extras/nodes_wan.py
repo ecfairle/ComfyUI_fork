@@ -719,6 +719,7 @@ class WanTrackToVideo:
 
             msk, y = res
             msk = -msk + 1.0  # Invert mask to match expected format
+            print("Mask shape:", msk.shape, "Latent shape:", y.shape)
             positive = node_helpers.conditioning_set_values(positive,
                                                             {"tracks": processed_tracks,
                                                                 "concat_mask": msk,
