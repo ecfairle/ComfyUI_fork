@@ -1222,12 +1222,13 @@ class WAN21(BaseModel):
                 mask = mask.repeat(1, 4, 1, 1, 1)
             mask = utils.resize_to_batch_size(mask, noise.shape[0])
 
+        torch.save(image, "y_final.pt")
         res = torch.cat((mask, image), dim=1)
 
-        tracks = kwargs.get("tracks", None)
-        if tracks is not None:
-            torch.save(tracks, "tracks.pt")
-            res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None]
+        # tracks = kwargs.get("tracks", None)
+        # if tracks is not None:
+        #     torch.save(tracks, "tracks_final.pt")
+        #     res = patch_motion(tracks.to(device), res[0], 220.0, (4, 16), 2)[None]
         
         print("res stats", res.shape, res.min(), res.max(), res.mean(), res.std())
         torch.save(res, "res.pt")
